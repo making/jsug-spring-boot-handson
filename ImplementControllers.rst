@@ -370,12 +370,12 @@ AccountControllerの実装
   import java.time.LocalDate;
 
   @Data
-  @Confirm(field = "password")
+  @Confirm(field = "password") // (1)
   public class AccountForm implements Serializable {
-      @Email
+      @Email // (2)
       @Size(min = 1, max = 100)
       @NotNull
-      @UnusedEmail
+      @UnusedEmail // (3)
       private String email;
       @Size(min = 6)
       @NotNull
@@ -385,7 +385,7 @@ AccountControllerの実装
       @Size(min = 1, max = 40)
       @NotNull
       private String name;
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) // (4)
       @NotNull
       private LocalDate birthDay;
       @NotNull
@@ -395,6 +395,31 @@ AccountControllerの実装
       @NotNull
       private String address;
   }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``@Confirm``\ アノテーションを使って、\ ``password``\ フィールドと\ ``confirmPassword``\ フィールドの値が等しいことを制約にします。
+       | このアノテーションはカスタムルールです。バリデータの実装は\ ``jsug.domain.validation.ConfirmValidator``\ クラスを確認してください。
+   * - | (2)
+     - | \ ``@Email``\ アノテーションを使って、Email形式であることを制約にします。
+   * - | (3)
+     - | \ ``@UnusedEmail``\ アノテーションを使って、Emailアドレスが使用されいないことを制約にします。
+       | このアノテーションはカスタムルールです。バリデータの実装は\ ``jsug.domain.validation.UnusedEmailValidator``\ クラスを確認してください。
+   * - | (4)
+     - | \ ``@DateTimeFormat``\ アノテーションを使って、入力値の日付文字列を\ ``LocalDate``\ 型に変換する際のフォーマットを指定します。
+       | このアノテーションはバリデーション用ではありません。
+
+.. note::
+
+    ここで使用したカスタムルール\ ``@Confirm``\ 、\ ``@UnusedEmail``\
+
 
 GoodsControllerの実装
 ================================================================================
