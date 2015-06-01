@@ -227,7 +227,11 @@ Spring MVCのControllerを実装して、Webアプリケーションを作成し
 LoginControllerの実装
 ================================================================================
 
+まずはログイン画面を返す簡単なControllerに以下の処理を実装します。
+
 * ログインフォーム画面表示処理
+
+\ ``src/main/java/jsug/app/login/LoginController.java``\ を作成して、以下のコードを記述してください。
 
 .. code-block:: java
 
@@ -244,13 +248,23 @@ LoginControllerの実装
       }
   }
 
+特筆すべき内容はありません。\ ``/loginForm``\ にアクセスすると、\ ``classpath:/templates/login/loginForm.html``\ がレンダリングされます。
+HTMLは既に準備されています。Controllerを実装したら、\ ``App.java``\ を実行してアプリケーションを起動してください。
+
+\ ``http://localhost:8080``\ にアクセスすると、認可制御により\ ``http://localhost:8080/loginForm``\ に遷移します。
 
 AccountControllerの実装
 ================================================================================
 
+次は\ ``AccountController``\ に以下の処理を実装します。
+
 * アカウント作成フォーム画面表示処理
 * アカウント作成処理
 * アカウント作成完了画面表示処理
+
+
+\ ``src/main/java/jsug/app/account/AccountController.java``\ を作成して、以下のコードを記述してください。
+
 
 .. code-block:: java
 
@@ -270,42 +284,74 @@ AccountControllerの実装
   @Controller
   @RequestMapping("account")
   public class AccountController {
-      @Autowired
+      @Autowired // (1)
       AccountService accountService;
 
-      @ModelAttribute
+      @ModelAttribute // (2)
       AccountForm setupForm() {
           return new AccountForm();
       }
 
-      @RequestMapping(value = "create", params = "form", method = RequestMethod.GET)
+      @RequestMapping(value = "create", params = "form", method = RequestMethod.GET) // (3)
       String createForm() {
           return "account/createForm";
       }
 
-      @RequestMapping(value = "create", method = RequestMethod.POST)
-      String create(@Validated AccountForm form, BindingResult bindingResult,
+      @RequestMapping(value = "create", method = RequestMethod.POST) // (4)
+      String create(@Validated AccountForm form /* (5) */, BindingResult bindingResult,
                     RedirectAttributes attributes) {
-          if (bindingResult.hasErrors()) {
+          if (bindingResult.hasErrors()) { // (6)
               return "account/createForm";
           }
-          Account account = Account.builder()
+          Account account = Account.builder() // (7)
                   .name(form.getName())
                   .email(form.getEmail())
                   .birthDay(form.getBirthDay())
                   .zip(form.getZip())
                   .address(form.getAddress())
                   .build();
-          accountService.register(account, form.getPassword());
-          attributes.addFlashAttribute(account);
-          return "redirect:/account/create?finish";
+          accountService.register(account, form.getPassword()); // (8)
+          attributes.addFlashAttribute(account); // (9)
+          return "redirect:/account/create?finish"; // (10)
       }
 
-      @RequestMapping(value = "create", params = "finish", method = RequestMethod.GET)
+      @RequestMapping(value = "create", params = "finish", method = RequestMethod.GET) // (11)
       String createFinish() {
           return "account/createFinish";
       }
   }
+
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``AccountService``\ をインジェクションして、主処理を委譲します。
+   * - | (2)
+     - | 画面で使うフォームに対応したオブジェクトを初期化して、\ ``Model``\ に追加します。\ ``AccountForm``\ は次に説明します。
+   * - | (3)
+     - | アカウント作成フォーム画面表示処理のためのリクエストマッピングを記述します。
+   * - | (4)
+     - | アカウント作成処理のためのリクエストマッピングを記述します。
+   * - | (5)
+     - | 入力されたフォームをバリデーションします。結果は隣の引数の\ ``BindingResult``\ に格納されます。
+   * - | (6)
+     - | バリデーションエラーがある場合は、フォーム画面に戻ります。
+   * - | (7)
+     - | フォームオブジェクトからドメインオブジェクトを作成します。
+   * - | (8)
+     - | \ ``AccountService``\ のアカウント登録処理を実行します。
+   * - | (9)
+     - | 作成された\ ``Account``\ オブジェクトをリダイレクト先で参照できるようにフラッシュスコープに設定します。
+   * - | (10)
+     - | アカウント作成完了画面へリダイレクトします。Post-Redirect-Get (PRG)パターンです。
+   * - | (11)
+     - | アカウント作成完了画面表示処理のためのリクエストマッピングを記述します。
 
 .. code-block:: java
 
