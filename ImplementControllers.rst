@@ -251,7 +251,7 @@ LoginControllerの実装
 特筆すべき内容はありません。\ ``/loginForm``\ にアクセスすると、\ ``classpath:/templates/login/loginForm.html``\ がレンダリングされます。
 HTMLは既に準備されています。Controllerを実装したら、\ ``App.java``\ を実行してアプリケーションを起動してください。
 
-\ ``http://localhost:8080``\ にアクセスすると、認可制御により\ ``http://localhost:8080/loginForm``\ に遷移します。
+http://localhost:8080\ にアクセスすると、認可制御により\ http://localhost:8080/loginForm\ に遷移します。
 
 AccountControllerの実装
 ================================================================================
@@ -353,6 +353,54 @@ AccountControllerの実装
    * - | (11)
      - | アカウント作成完了画面表示処理のためのリクエストマッピングを記述します。
 
+入力フォームの情報は以下の通りです。
+
+.. tabularcolumns:: |p{0.40\linewidth}|p{0.20\linewidth}|p{0.40\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 40
+
+
+   * - フィールド名
+     - 型
+     - 制約条件
+   * - | \ ``email``\
+     - | \ ``String``\
+     - | 必須
+       | 1文字以上、100文字以下
+       | Email形式
+       | 未使用
+   * - | \ ``password``\
+     - | \ ``String``\
+     - | 必須
+       | 6文字以上
+   * - | \ ``confirmPassword``\
+     - | \ ``String``\
+     - | 必須
+       | \ ``password``\ と同じ値
+   * - | \ ``name``\
+     - | \ ``String``\
+     - | 必須
+       | 6文字以上
+   * - | \ ``birthDay``\
+     - | \ ``LocalDate``\
+     - | 必須
+   * - | \ ``zip``\
+     - | \ ``String``\
+     - | 必須
+       | 7桁の半角数字
+   * - | \ ``address``\
+     - | \ ``String``\
+     - | 必須
+       | 1文字以上、100文字以下
+
+
+この情報を元に、フォームクラスを作成しましょう。
+
+
+\ ``src/main/java/jsug/app/account/AccountForm.java``\ を作成して、以下のコードを記述してください。
+
+
 .. code-block:: java
 
   package jsug.app.account;
@@ -418,8 +466,14 @@ AccountControllerの実装
 
 .. note::
 
-    ここで使用したカスタムルール\ ``@Confirm``\ 、\ ``@UnusedEmail``\
+    ここで使用したカスタムルール\ ``@Confirm``\ 、\ ``@UnusedEmail``\ の作成に関しては、
+    \ `こちらのドキュメント <http://terasolunaorg.github.io/guideline/5.0.0.RELEASE/ja/ArchitectureInDetail/Validation.html#id13>`_\ を参考にしました。
 
+\ ``App.java``\ を再実行してアプリケーションを起動してください。
+
+http://localhost:8080/account/create?form\ にアクセスすると、アカウント作成フォームが表示されます。
+正しく情報を入力すればアカウントが作成でき、その情報を用いてログインできます。
+ただし、ログイン後のControllerは未実装なのでエラー画面が表示されます。
 
 GoodsControllerの実装
 ================================================================================
