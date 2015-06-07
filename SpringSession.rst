@@ -332,6 +332,7 @@ Spring Sessionとは直接関係ありませんが、\ ``CacheManager``\ 実装�
 それでは複数サーバーを立ち上げましょう。Redisサーバーも起動してください。
 
 .. code-block:: console
+
     $ mvn clean package # jar作成
     $ cd target
     $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 1台目
