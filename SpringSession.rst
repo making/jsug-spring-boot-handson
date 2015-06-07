@@ -1,6 +1,22 @@
 Spring Sessionの導入
 ********************************************************************************
 
+ここまで、作成したきたシステムは1サーバーで実行されることのみ考えられていました。
+
+カートがHTTPセッション上で管理されているため、サーバーを複数台にスケールアウトした場合はセッションレプリケーションまたはロードバランサによって
+同一セッションが同一サーバーに振り分けられるように設定する必要があります（スティッキーセッション）。
+
+一般的に、セッションレプリケーションの設定はAPサーバー依存です。
+また、スティッキーセッションは、サーバーがダウンするとそのサーバーが扱っていたセッション情報がなくなってしまうという課題もあります。
+
+そこで登場したのが「Spring Session」です。Spring Sessionでは(Filterを経由することで)、\ ``HttpSession``\ の実装を上書きし、
+\ ``HttpSession``\ のAPIを通じて透過的にRedisなどKVSにアクセスします。これにより、複数サーバーでセッション情報を共有することができます。
+
+本章では、Spring SessionとRedisを使い、作成したアプリケーションを複数サーバー起動できるようにしましょう。
+
+
+本章完了時点でのソースコードツリーを以下に示します。ハイライトされた部分が本章で追加・修正するファイルです。
+
 .. code-block:: console
     :emphasize-lines: 2,8
 
@@ -163,6 +179,8 @@ Spring Sessionの導入
                     ├── insert-goods.sql
                     └── insert-orders.sql
 
+pom.xmlに以下の依存関係を追加してください。
+
 .. code-block:: xml
 
 
@@ -175,6 +193,8 @@ Spring Sessionの導入
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-redis</artifactId>
     </dependency>
+
+Spring BootでSpring Sessionを使うための設定はとても簡単で、以下のように、JavaConfigに\ ``@EnableRedisHttpSession``\ をつけるだけです。
 
 .. code-block:: java
     :emphasize-lines: 16,24
@@ -235,6 +255,8 @@ Spring Sessionの導入
         }
     }
 
+Spring Sessionとは直接関係ありませんが、\ ``CacheManager``\ 実装もSpring Data Redisが提供している\ ``RedisCacheManager``\ に差し替えます。
+これにより、カートの情報やリザルトキャッシュもサーバー間で共有できます。
 
 .. code-block:: java
     :emphasize-lines: 7, 16-19,49-50
@@ -287,8 +309,40 @@ Spring Sessionの導入
         }
 
         @Bean
-        CacheManager cacheManager(@Qualifier("redisTemplate") RedisOperations<Object, Object> redisOperations) {
+        CacheManager cacheManager(@Qualifier("redisTemplate") /* (1) */ RedisOperations<Object, Object> redisOperations) {
             return new RedisCacheManager((RedisTemplate) redisOperations);
         }
 
     }
+
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | Spring Data Redisを有効にすると、Spring BootのAutoConfigureにより、2種類の\ ``RedisOperations``\ がDIコンテナに登録されます。
+       | \ ``RedisCacheManager``\ のコンストラクタで必要なのは\ ``RedisOperations``\ の実装クラスの\ ``RedisTemplate``\ ですので、\ ``@Qualifier``\ でBean名を指定してインジェクションします。
+       | ここはSpring Boot 1.3で改善されると思います。
+
+
+それでは複数サーバーを立ち上げましょう。Redisサーバーも起動してください。
+
+.. code-block:: console
+
+    $ mvn spring-boot:run -Darguments="--server.port=8080" # 1台目
+    $ mvn spring-boot:run -Darguments="--server.port=8081" # 2台目
+    $ mvn spring-boot:run -Darguments="--server.port=8082" # 3台目
+
+8080-8082番ポートどれにアクセスしても、カートの情報が共有されていることを確認してください。
+
+Redisのホスト名、ポートがデフォルt(localhost, 6379)でない場合は、以下のように明示してください
+
+.. code-block:: console
+
+    $ mvn spring-boot:run -Darguments="--server.port=8080,--spring.redis.host=redishost,--spring.redis.port=6379" # 1台目
+    $ mvn spring-boot:run -Darguments="--server.port=8081,--spring.redis.host=redishost,--spring.redis.port=6379" # 2台目
+    $ mvn spring-boot:run -Darguments="--server.port=8082,--spring.redis.host=redishost,--spring.redis.port=6379" # 3台目
