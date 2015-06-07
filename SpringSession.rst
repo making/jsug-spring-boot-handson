@@ -229,7 +229,7 @@ Spring Sessionの導入
             SimpleCacheManager cacheManager = new SimpleCacheManager();
             cacheManager.setCaches(Arrays.asList(
                     new ConcurrentMapCache("category"),
-                    new ConcurrentMapCache("goods"),
+                    new ConcurrentMapCache("goods"),push
                     new ConcurrentMapCache("sql")));
             return cacheManager;
         }

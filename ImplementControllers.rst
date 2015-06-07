@@ -478,9 +478,14 @@ http://localhost:8080/account/create?form\ にアクセスすると、アカウ�
 GoodsControllerの実装
 ================================================================================
 
+次は\ ``GoodsController``\ に以下の処理を実装します。
+
 * 商品一覧画面表示処理
 * 商品一覧画面表示(カテゴリ指定)処理
 * 商品をカートへ追加処理
+
+\ ``src/main/java/jsug/app/goods/GoodsController.java``\ を作成して、以下のコードを記述してください。
+
 
 .. code-block:: java
 
@@ -512,9 +517,9 @@ GoodsControllerの実装
       @Autowired
       CategoryService categoryService;
       @Autowired
-      Cart cart;
+      Cart cart; // (1)
 
-      @ModelAttribute("categories")
+      @ModelAttribute("categories") // (2)
       List<Category> getCategories() {
           return categoryService.findAll();
       }
@@ -526,7 +531,7 @@ GoodsControllerの実装
 
       @RequestMapping(value = "/")
       String showGoods(@RequestParam(defaultValue = "1") Integer categoryId,
-                       @PageableDefault Pageable pageable, Model model) {
+                       @PageableDefault Pageable pageable /* (3) */, Model model) {
           Page<Goods> page = goodsService.findByCategoryId(categoryId, pageable);
           model.addAttribute("page", page);
           model.addAttribute("categoryId", categoryId);
@@ -548,6 +553,51 @@ GoodsControllerの実装
       }
   }
 
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``Cart``\ モデルをインジェクションします。このモデルのBean定義はまだ行っていません。この後、定義します。
+   * - | (2)
+     - | 画面で常に表示するカテゴリ一覧情報を毎度\ ``Model``\ に設定するために、\ ``@ModelAttribute``\ アノテーションを使っています。
+       | この今回は一画面しか使わないので、\ ``model.addAttribute("categories", categoryService.findAll())``\ でも良いです。
+   * - | (3)
+     - | ページングのための情報を取得します。今回のハンズオンではページングのUIはありませんが、サーバーサイドは念のためページングの用意をしておきます。
+
+商品をカートに追加する際の入力フォームの情報は以下の通りです。
+
+.. tabularcolumns:: |p{0.40\linewidth}|p{0.20\linewidth}|p{0.40\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 40
+
+
+   * - フィールド名
+     - 型
+     - 制約条件
+   * - | \ ``goodsId``\
+     - | \ ``UUID``\
+     - | 必須
+   * - | \ ``quantity``\
+     - | \ ``Integer``\
+     - | 必須
+       | 1以上、50以下
+   * - | \ ``categoryId``\
+     - | \ ``Integer``\
+     - | 必須
+
+
+この情報を元に、フォームクラスを作成しましょう。
+
+
+\ ``src/main/java/jsug/app/goods/AddToCartForm.java``\ を作成して、以下のコードを記述してください。
+
+
 .. code-block:: java
 
   package jsug.app.goods;
@@ -563,11 +613,20 @@ GoodsControllerの実装
   public class AddToCartForm {
       @NotNull
       private UUID goodsId;
+      @NotNull
       @Min(1)
       @Max(50)
-      private int quantity;
-      private int categoryId;
+      private Integer quantity;
+      @NotNull
+      private Integer categoryId;
   }
+
+次に、\ ``Cart``\ をDIコンテナに管理させるためにJavaConfigを修正します。
+
+なぜ、DIコンテナに管理させたいかというと、\ ``Cart``\ のスコープを制御したいからです。
+ここでは\ ``Cart``\ を、ログインしたユーザーがログイン中に同じカートインスタンスを使い続けられるように、Sessionスコープに登録します。
+
+もし、DIコンテナを使用しなければ、自前で\ ``HttpSession``\ へのオブジェクトの出し入れを管理する必要があり、アプリケーションのソースコードが煩雑になってしまいます。
 
 .. code-block:: java
   :emphasize-lines: 3,10-12,32-36
@@ -604,17 +663,37 @@ GoodsControllerの実装
       }
 
       @Bean
-      @Scope(value = WebApplicationContext.SCOPE_SESSION, proxyMode = ScopedProxyMode.TARGET_CLASS)
+      @Scope(value = WebApplicationContext.SCOPE_SESSION, proxyMode = ScopedProxyMode.TARGET_CLASS) // (1)
       Cart cart() {
           return new Cart();
       }
   }
 
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``Cart``\ をBean定義します。\ ``scope``\ 属性には\ ``session``\ を指定します。
+       | \ ``session``\ スコープよりも寿命の長い\ ``singleton``\ スコープのControllerにもインジェクションできるように、scoped-proxyの設定を行います。
+       | \ ``Cart``\ の振る舞いには特別なインターフェースを用意していないため、\ ``scope``\ 属性には\ ``TARGET_CLASS``\ を指定します。
+
+これでログイン後の画面が表示されるようになりました。カートに商品を追加するとその先のカート一覧画面が404エラーを返すはずです。
+
 CartControllerの実装
 ================================================================================
 
+次は\ ``CartController``\ に以下の処理を実装します。
+
 * カート表示画面処理
 * 商品をカートから削除処理
+
+\ ``src/main/java/jsug/app/cart/CartController.java``\ を作成して、以下のコードを記述してください。
 
 
 .. code-block:: java
@@ -651,13 +730,41 @@ CartControllerの実装
       @RequestMapping(method = RequestMethod.POST)
       String removeFromCart(@Validated CartForm cartForm, BindingResult bindingResult, Model model) {
           if (bindingResult.hasErrors()) {
-              model.addAttribute("error", "商品がチェックされていません");
+              model.addAttribute("error", "商品がチェックされていません"); // (1)
               return viewCart(model);
           }
           cart.remove(cartForm.getLineNo());
           return "redirect:/cart";
       }
   }
+
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | これまでは入力フォームの横にBean Validationのエラーメッセージを出力していましたが、今回は画面の上部にエラーメッセージを表示します。
+
+カートから商品を削除する際の入力フォームの情報は以下の通りです。
+
+.. tabularcolumns:: |p{0.40\linewidth}|p{0.20\linewidth}|p{0.40\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 40
+
+   * - フィールド名
+     - 型
+     - 制約条件
+   * - | \ ``lineNo``\ (一覧テーブルの行番号)
+     - | \ ``Set<Integer>``\
+     - | 1件以上
+
+
+\ ``src/main/java/jsug/app/cart/CartForm.java``\ を作成して、以下のコードを記述してください。
 
 .. code-block:: java
 
@@ -677,14 +784,18 @@ CartControllerの実装
       private Set<Integer> lineNo;
   }
 
+カート確認画面が表示できました。最後に注文画面を実装しましょう。
 
 OrderControllerの実装
 ================================================================================
+
+次は\ ``OrderController``\ に以下の処理を実装します。
 
 * 注文確認画面処理
 * 注文処理
 * 注文完了画面表示処理
 
+\ ``src/main/java/jsug/app/order/OrderController.java``\ を作成して、以下のコードを記述してください。
 
 .. code-block:: java
 
@@ -710,14 +821,14 @@ OrderControllerの実装
       Cart cart;
 
       @RequestMapping(method = RequestMethod.GET, params = "confirm")
-      String confirm(@AuthenticationPrincipal ShopUserDetails userDetails, Model model) {
+      String confirm(@AuthenticationPrincipal ShopUserDetails userDetails /* (1) */, Model model) {
           model.addAttribute("orderLines", cart.getOrderLines());
           if (cart.isEmpty()) {
               model.addAttribute("error", "買い物カゴが空です");
               return "cart/viewCart";
           }
           model.addAttribute("account", userDetails.getAccount());
-          model.addAttribute("signature", orderService.calcSignature(cart));
+          model.addAttribute("signature", orderService.calcSignature(cart)); // (2)
           return "order/confirm";
       }
 
@@ -736,9 +847,41 @@ OrderControllerの実装
   }
 
 
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``@AuthenticationPrincipal``\ アノテーションでログイン中の認証ユーザー情報を取得できます。
+       | \ ``account``\ プロパティに、ユーザーの住所などが含まれており、\ ``Model``\ に渡して画面で表示します。
+   * - | (2)
+     - | 注文確認画面で確認したカートの状態と実際に注文した際の状態に違いがないように署名データを埋め込みます。
+
+これで一通りのアプリケーションの実装が終わりました。
+
+アカウント作成から、商品選択、注文まで動かすことができます。
+
 入力チェックエラーメッセージの変更
 ================================================================================
 
+いまの実装では、入力チェックがBean Validationのデフォルトのままであまり親切ではありません。
+
+エラーメッセージの変え方は2種類あります。
+
+* Bean Validationの作法(\ ``ValidationMessages.properties``\ )でメッセージを定義する
+* Springの作法(\ ``MessageSource``\ )でメッセージを定義する
+
+Springの作法でメッセージを定義する方が、メッセージの粒度(アノテーション単位か、フォーム単位か、フィールド単位か等)を決められたり、
+フィールド名を含められたりするので、こちらを使用します。
+
+Spring Bootでは\ ``src/main/resources/messages.properties``\ に定義したメッセージが\ ``MessageSource``\ で使われます。
+デフォルトエンコードがUTF-8なので、\ ``native2ascii``\ コマンドで変換する必要はなく、日本語をそのまま記述できます。
+
+\ ``src/main/resources/messages.properties``\ に以下のようなメッセージを定義してください。
 
 .. code-block:: properties
 
@@ -751,3 +894,19 @@ OrderControllerの実装
 
   Pattern.zip=7桁の整数を入力してください
   Confirm.confirmPassword=パスワードとパスワード(確認)が異なります
+
+メッセージは以下の優先順で解決されます。
+
+1. code + "." + object name + "." + field
+2. code + "." + field
+3. code + "." + field type
+4. code
+
+Bean Validationの場合、codeはアノテーション名になります。
+
+.. note::
+
+    より詳細な情報は以下のページを参照してください。
+
+    * http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/validation/DefaultMessageCodesResolver.html
+    * http://terasolunaorg.github.io/guideline/5.0.0.RELEASE/ja/ArchitectureInDetail/Validation.html#validation-message-def
