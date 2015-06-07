@@ -1,8 +1,8 @@
-例外ハンドリング
+例外ハンドリングの実装
 ********************************************************************************
 
 前章でWebアプリケーションを構築しましたが、特に例外ハンドリングは行っていません。デフォルトの例外ハンドリングが実施され、
-白いエラー画面が表示されます。
+デフォルトのエラー画面として白いエラー画面が表示されます。
 
 サービスクラスでは以下の条件で例外がスローされます。
 
@@ -193,6 +193,10 @@ GoodsControllerの例外ハンドリング
 ================================================================================
 
 
+Controllerで発生する例外を、Controller単位でハンドリングする場合は\ ``@ExceptionHandler``\ アノテーションを使います。
+
+まずは\ ``GoodsController``\ で発生する\ ``GoodsNotFoundException``\ をハンドリングしましょう。
+
 .. code-block:: java
     :emphasize-lines: 8,14,65-70
 
@@ -261,16 +265,36 @@ GoodsControllerの例外ハンドリング
             return "redirect:/cart";
         }
 
-        @ExceptionHandler(GoodsNotFoundException.class)
-        @ResponseStatus(HttpStatus.NOT_FOUND)
+        @ExceptionHandler(GoodsNotFoundException.class) // (1)
+        @ResponseStatus(HttpStatus.NOT_FOUND) // (2)
         String handleGoodsNotFoundException() {
-            return "goods/notFound";
+            return "goods/notFound"; // (3)
         }
     }
 
 
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``@ExceptionHandler``\ アノテーションでハンドリングする例外クラスを指定します。
+       | ここでは\ ``GoodsNotFoundException``\ を対処します。
+   * - | (2)
+     - | \ ``@ResponseStatus``\ アノテーションでHTTPステータスコードを指定します。ここでは404エラーになるようにします。
+       | このアノテーションは例外ハンドリング専用ではなく、 \ ``@RequestMapping``\ アノテーションと組み合わせることもできます。
+   * - | (3)
+     - | エラー画面のview名(htmlパス)を返します。
+
+このエラーを発生させるのは少し難しいですが、カートに商品を追加する際のPOSTのリクエストを改ざんして、\ ``goodsId``\ の値を変更すれば良いです。
+
 OrderControllerの例外ハンドリング
 ================================================================================
+
+次に\ ``OrderController``\ で発生する\ ``EmptyCartOrderException``\ と\ ``InvalidCartOrderException``\ をハンドリングします。
 
 .. code-block:: java
     :emphasize-lines: 5-6,10,15,50-56
@@ -325,17 +349,48 @@ OrderControllerの例外ハンドリング
             return "order/finish";
         }
 
-        @ExceptionHandler({EmptyCartOrderException.class, InvalidCartOrderException.class})
-        @ResponseStatus(HttpStatus.CONFLICT)
-        ModelAndView handleOrderException(RuntimeException e) {
-            return new ModelAndView("order/error")
+        @ExceptionHandler({EmptyCartOrderException.class, InvalidCartOrderException.class}) // (1)
+        @ResponseStatus(HttpStatus.CONFLICT) // (2)
+        ModelAndView handleOrderException(RuntimeException e /* (3) */) {
+            return new ModelAndView("order/error") // (4)
                     .addObject("error", e.getMessage());
         }
     }
 
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``@ExceptionHandler``\ アノテーションでハンドリングする例外クラスを複数指定できます。
+   * - | (2)
+     - | \ ``@ResponseStatus``\ アノテーションで409エラーになるようにします。
+   * - | (3)
+     - | \ ``@ExceptionHandler``\ で指定した複数のクラスをどちらでも引数でとれるように、共通の親クラスである \ ``RuntimeException``\ で受けます。
+   * - | (4)
+     - | \ ``@ExceptionHandler``\ メソッドでは\ ``Model``\ が取れない(構築されていない)ので、\ ``ModelAndView``\ を返して\ ``Model``\ とview名を設定します。
+       | (今後、\ ``Model``\ を引数にとれるようになる可能性があります)
+
+.. note::
+
+    \ ``@ExceptionHandler``\ は指定したクラスの子クラスもハンドリングできるので、この2つの共通親クラスである、
+    \ ``RuntimeException``\ をハンドリングすることで、両クラスをハンドリングできます。この場合は、当然ですが\ ``DataAccessException``\
+    などその他の例外もハンドリングされることに注意してください。
+
+注文確認画面まで進んだあと、別のタブを開いてカートの状態を変更して元の画面から注文を行ってみてください。
 
 予期せぬ例外発生時のエラー画面
 ================================================================================
+
+前述の例外ハンドリングで扱った例外クラス以外の例外が発生した場合は、依然として白いエラー画面が表示されます。
+この画面を変更する場合は、view名が\ ``error``\ のViewを用意すれば良いです。
+
+Thymeleafの場合、\ ``src/main/resources/templates/error.html``\ を作成すれば白いエラー画面を上書きできます。
+
+以下のHTMLを作成しましょう。
 
 .. code-block:: html
 
@@ -375,8 +430,21 @@ OrderControllerの例外ハンドリング
     </body>
     </html>
 
+たとえば、http://localhost:8080/?categoryId=a\ にアクセスすれば、予期せぬエラーが発生しこの画面に遷移します。
+
 AspectJによる例外ハンドリング
 ================================================================================
+
+先ほどのデフォルトエラー画面を変更しましたが、この影響でデフォルトエラー画面に遷移する際にログが出なくなってしまいました。
+
+そこで、AOPを使ってエラーを捕捉し、ログを出力します。今回はAspectJを使ってAspectを実装します。
+
+Spring MVCの例外ハンドリングは複数の\ ``org.springframework.web.servlet.HandlerExceptionResolver``\ インターフェースによって行われます。
+\ ``HandlerExceptionResolver``\ は複数登録でき、連鎖的に呼ばれます。
+
+そこで、このインターフェースに対して、Aspectを作成しログ出力を差し込みます。
+
+pom.xmlに以下の依存関係を追加してください。
 
 .. code-block:: xml
 
@@ -384,6 +452,8 @@ AspectJによる例外ハンドリング
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-aop</artifactId>
     </dependency>
+
+\ ``src/main/java/jsug/infra/logging/HandlerExceptionResolverLoggingAspect``\ を作成し、以下のコードを実装してください。
 
 .. code-block:: java
 
@@ -398,13 +468,13 @@ AspectJによる例外ハンドリング
     import javax.servlet.http.HttpServletRequest;
 
     @Component
-    @Aspect
+    @Aspect // (1)
     @Slf4j
     public class HandlerExceptionResolverLoggingAspect {
-        @Around("execution(* org.springframework.web.servlet.HandlerExceptionResolver.resolveException(..))")
-        public Object logException(ProceedingJoinPoint joinPoint) throws Throwable {
+        @Around("execution(* org.springframework.web.servlet.HandlerExceptionResolver.resolveException(..))") // (2)
+        public Object logException(ProceedingJoinPoint joinPoint /* (3) */) throws Throwable {
             Object ret = joinPoint.proceed();
-            HttpServletRequest request = (HttpServletRequest) joinPoint.getArgs()[0];
+            HttpServletRequest request = (HttpServletRequest) joinPoint.getArgs()[0]; // (1)
 
             if (request.getAttribute("ERROR_LOGGED") == null) {
                 Object handler = joinPoint.getArgs()[2];
@@ -412,8 +482,34 @@ AspectJによる例外ハンドリング
                 log.info("Error occurred [url=" + request.getMethod() + " " + request.getRequestURI() + ", handler=" + handler + "]",
                         exception);
                 // mark as logged
-                request.setAttribute("ERROR_LOGGED", true);
+                request.setAttribute("ERROR_LOGGED", true); // (4)
             }
             return ret;
         }
     }
+
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``@Aspect``\ アノテーションをつけてAspectを定義します。
+   * - | (2)
+     - | \ ``@Around``\ アノテーションをつけてAroundアドバイスを定義します。\ ``HandlerExceptionResolver#resolveException``\ メソッドが対象になるように設定します。
+   * - | (3)
+     - | JointPoint情報から、実行されたメソッドの情報を取得できます。ここでは引数を取得しています。
+   * - | (4)
+     - | \ ``HandlerExceptionResolver#resolveException``\ メソッドは複数回呼ばれる可能性があるため、マークをつけて複数回呼ばれないようにします。
+
+.. note::
+
+    この例外ハンドリング方法が適切かどうか怪しいですが、汎用的なハンドリング方法として覚えておいて損はないです。
+
+    AOPの用語に関しては\ `こちら <http://d.hatena.ne.jp/minokuba/20110301/1298996870>`_\ を確認してください。
+
+
+サイド、http://localhost:8080/?categoryId=a\ にアクセスして、ログが出力されることを確認してください。
