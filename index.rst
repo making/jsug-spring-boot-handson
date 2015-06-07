@@ -1,4 +1,4 @@
-ドキュメント名
+Spring Bootハンズオン
 ======================================================================================
 
 本ハンズオンでは、簡単なECサイト作成を通じて、Spring Framework/Spring Bootの機能を学んでいきます。
@@ -30,5 +30,4 @@
     Caching
     SpringSession
     Docker
-    CodingStandard
 

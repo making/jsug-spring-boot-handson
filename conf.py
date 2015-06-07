@@ -45,8 +45,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Sphinxドキュメント雛形'
-copyright = u'2014, making'
+project = u'Spring Bootハンズオン'
+copyright = u'2015, making'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

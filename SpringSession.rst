@@ -324,7 +324,7 @@ Spring Sessionとは直接関係ありませんが、\ ``CacheManager``\ 実装�
    * - 項番
      - 説明
    * - | (1)
-     - | Spring Data Redisを有効にすると、Spring BootのAutoConfigureにより、2種類の\ ``RedisOperations``\ がDIコンテナに登録されます。
+     - | Spring Data Redisを依存関係に追加すると、Spring BootのAutoConfigureにより、2種類の\ ``RedisOperations``\ がDIコンテナに登録されます。
        | \ ``RedisCacheManager``\ のコンストラクタで必要なのは\ ``RedisOperations``\ の実装クラスの\ ``RedisTemplate``\ ですので、\ ``@Qualifier``\ でBean名を指定してインジェクションします。
        | ここはSpring Boot 1.3で改善されると思います。
 
@@ -332,10 +332,11 @@ Spring Sessionとは直接関係ありませんが、\ ``CacheManager``\ 実装�
 それでは複数サーバーを立ち上げましょう。Redisサーバーも起動してください。
 
 .. code-block:: console
-
-    $ mvn spring-boot:run -Darguments="--server.port=8080" # 1台目
-    $ mvn spring-boot:run -Darguments="--server.port=8081" # 2台目
-    $ mvn spring-boot:run -Darguments="--server.port=8082" # 3台目
+    $ mvn clean package # jar作成
+    $ cd target
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 1台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 2台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 3台目
 
 8080-8082番ポートどれにアクセスしても、カートの情報が共有されていることを確認してください。
 
@@ -343,6 +344,6 @@ Redisのホスト名、ポートがデフォルt(localhost, 6379)でない場合
 
 .. code-block:: console
 
-    $ mvn spring-boot:run -Darguments="--server.port=8080,--spring.redis.host=redishost,--spring.redis.port=6379" # 1台目
-    $ mvn spring-boot:run -Darguments="--server.port=8081,--spring.redis.host=redishost,--spring.redis.port=6379" # 2台目
-    $ mvn spring-boot:run -Darguments="--server.port=8082,--spring.redis.host=redishost,--spring.redis.port=6379" # 3台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 # 1台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8081 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 # 2台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8082 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 # 3台目
