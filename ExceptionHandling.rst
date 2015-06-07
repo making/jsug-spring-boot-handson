@@ -512,4 +512,4 @@ pom.xmlに以下の依存関係を追加してください。
     AOPの用語に関しては\ `こちら <http://d.hatena.ne.jp/minokuba/20110301/1298996870>`_\ を確認してください。
 
 
-サイド、http://localhost:8080/?categoryId=a\ にアクセスして、ログが出力されることを確認してください。
+再度、http://localhost:8080/?categoryId=a\ にアクセスして、ログが出力されることを確認してください。

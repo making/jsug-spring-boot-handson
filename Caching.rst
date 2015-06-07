@@ -1,6 +1,12 @@
 キャッシュの利用
 ********************************************************************************
 
+Springには優秀なキャッシュ抽象化機構が用意されています。これを利用することで、システムの性能を向上させることができます。
+特に、変更頻度が少ないデータを返すメソッドをキャッシュすることで無駄なデータアクセスなどを防げます。
+
+これまで作成してきたアプリケーションで改善できる箇所を修正しましょう。
+
+本章完了時点でのソースコードツリーを以下に示します。ハイライトされた部分が本章で追加・修正するファイルです。
 
 .. code-block:: console
     :emphasize-lines: 8,50,47,34,63-65
@@ -164,10 +170,25 @@
                     ├── insert-goods.sql
                     └── insert-orders.sql
 
+.. note::
+
+    キャッシュ抽象化については\ `この記事 <https://blog.ik.am/#/entries/339>`_\ を参考にしてください。
 
 
 @Cacheableによるリザルトキャッシュ
 ================================================================================
+
+メソッドに\ ``@Cacheable``\ アノテーションを付けることで、そのメソッドの結果はキャッシュされ、2回目以降のメソッド呼び出しの結果はキャッシュから返ります。
+
+キャッシュ対象として、以下のメソッドを修正します。
+
+
+* \ ``SqlFinder#get``\
+* \ ``CategoryService#findAll``\
+* \ ``GoodsService#findOne``\
+* \ ``GoodsService#findByCategoryId``\
+
+\ ``@Cacheable``\ アノテーションにはキャッシュ名を指定します。
 
 .. code-block:: java
     :emphasize-lines: 4,18
@@ -229,6 +250,7 @@
         }
     }
 
+キャッシュ抽象化機構を有効にするために、JavaConfigを修正します。
 
 .. code-block:: java
     :emphasize-lines: 6,21,28
@@ -292,7 +314,7 @@
     import java.util.Arrays;
 
     @Configuration
-    @EnableCaching
+    @EnableCaching // (1)
     public class AppConfig {
         @Autowired
         DataSourceProperties dataSourceProperties;
@@ -315,8 +337,8 @@
         }
 
         @Bean
-        CacheManager cacheManager() {
-            SimpleCacheManager cacheManager = new SimpleCacheManager();
+        CacheManager cacheManager() { // (2)
+            SimpleCacheManager cacheManager = new SimpleCacheManager(); // (3)
             cacheManager.setCaches(Arrays.asList(
                     new ConcurrentMapCache("category"),
                     new ConcurrentMapCache("goods"),
@@ -325,6 +347,24 @@
         }
     }
 
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - 項番
+     - 説明
+   * - | (1)
+     - | \ ``@EnableCaching``\ アノテーションでキャッシュ機能を有効にします。
+   * - | (2)
+     - | キャッシュ機能を使うためには、\ ``CacheManager``\ を定義する必要があります。
+   * - | (3)
+     - | まずは一番シンプルな、\ ``ConcurrentHashMap``\ を使用した、\ ``SimpleCacheManager``\ を利用します。
+       | 利用するキャッシュ名を設定します。
+
+.. note::
+
+    キャッシュ機能はSpring Boot 1.3からは自動化対象になり、設定不要になります。
 
 カートの状態をキャッシュに保存
 ================================================================================
