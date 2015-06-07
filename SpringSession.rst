@@ -348,3 +348,21 @@ Redisのホスト名、ポートがデフォルt(localhost, 6379)でない場合
     $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 # 1台目
     $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8081 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 # 2台目
     $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8082 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 # 3台目
+
+実は、それぞれのプロセスごとにインメモリDBを作成しているので、このままでは不十分です。
+
+H2データベースをサーバー化しましょう。
+
+.. code-block:: console
+
+    $ java -jar ~/.m2/repository/com/h2database/h2/1.4.185/h2-1.4.185.jar -tcp
+
+データベースのURLは\ ``spring.datasource.url``\ で指定できます。
+
+.. code-block:: console
+
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 --spring.datasource.url=jdbc:h2:tcp://localhost/~/jsug-shop # 1台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8081 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 --spring.datasource.url=jdbc:h2:tcp://localhost/~/jsug-shop # 2台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8082 --spring.redis.host=192.168.99.100 --spring.redis.port=6379 --spring.datasource.url=jdbc:h2:tcp://localhost/~/jsug-shop # 3台目
+
+これで、3台構成のシステムが構築できました。
