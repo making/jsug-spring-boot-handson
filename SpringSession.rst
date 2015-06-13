@@ -336,8 +336,8 @@ Spring Sessionとは直接関係ありませんが、\ ``CacheManager``\ 実装�
     $ mvn clean package # jar作成
     $ cd target
     $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 1台目
-    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 2台目
-    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8080 # 3台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8081 # 2台目
+    $ java -jar jsug-shop-1.0-SNAPSHOT.jar --server.port=8082 # 3台目
 
 8080-8082番ポートどれにアクセスしても、カートの情報が共有されていることを確認してください。
 
