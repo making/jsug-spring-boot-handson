@@ -209,11 +209,10 @@ shopイメージの\ ``Dockerfile``\ は\ ``ENTRYPOINT``\ でJavaを実行する
     2015-06-14 16:04:54.156  INFO 1 --- [           main] s.b.c.e.t.TomcatEmbeddedServletContainer : Tomcat started on port(s): 8080 (http)
     2015-06-14 16:04:54.160  INFO 1 --- [           main] jsug.App                                 : Started App in 14.291 seconds (JVM running for 14.978)
 
-無事、起動しました。
+無事、起動しました。起動したアプリケーションのコンテナはCtrl+Cで終了できます。
 
 ただ、いちいちDockerで起動したRedisの情報を調べて、アプリケーションの外から指定するのは面倒ですね。
 
-起動したアプリケーションのコンテナはCtrl+Cで終了できます。
 
 Dockerのリンク機能使用
 ================================================================================
@@ -285,7 +284,7 @@ Spring Boot Actuatorが有効になっているので\ ``http://<Dockerホスト
 
     $ docker rm -f redis h2
 
-ここで作成した、Dockerイメージは本ハンズオンの最終版なので、DockerHubのアカウントを持っている場合は、この状態でDockerリポジトリにデプロイしましょう。
+ここで作成した、Dockerイメージは本ハンズオンの最終版なので、DockerHubのアカウントを持っている場合は、この状態でDockerリポジトリにデプロイしましょう。(\ ``username`` \ の部分は、自分の環境に合わせて書き換えてください)
 
 .. code-block:: console
 
