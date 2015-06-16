@@ -17,12 +17,17 @@
 
 .. code-block:: console
 
-    $ git branch
+    $ git branch -a
     * ch01
-      ch02
-      ch03
-      ch04
-      ch05
+      remotes/origin/HEAD -> origin/ch01
+      remotes/origin/ch01
+      remotes/origin/ch02
+      remotes/origin/ch03
+      remotes/origin/ch04
+      remotes/origin/ch05
+      remotes/origin/ch06
+      remotes/origin/ch06-2
+      remotes/origin/ch06-3
 
 \ ``ch01``\ ブランチになっていない場合は、以下のコマンドでブランチを切り替えてください。
 
@@ -317,6 +322,7 @@ JUnitコードの確認
     import org.springframework.beans.factory.annotation.Autowired;
     import org.springframework.test.context.ContextConfiguration;
     import org.springframework.test.context.jdbc.Sql;
+    import org.springframework.test.context.jdbc.SqlConfig;
     import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
     import java.time.LocalDate;
@@ -330,7 +336,7 @@ JUnitコードの確認
             "/sql/drop-tables.sql",
             "/db/migration/V1__create-schema.sql",
             "/sql/insert-accounts.sql"
-    })
+    }, config = @SqlConfig(encoding = "UTF-8"))
     public class AccountServiceTest {
         @Autowired
         AccountService accountService; // (4)
